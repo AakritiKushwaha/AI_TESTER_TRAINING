@@ -57,7 +57,7 @@ Return a JSON object with a list of sections, each containing 'title' and 'conte
         "model": os.getenv('GROQ_API_MODEL', 'llama-3.3-70b-versatile'),
         "messages": [{"role": "system", "content": prompt}, {"role": "user", "content": json.dumps(jira_data)}],
         "temperature": 0.0,
-        "max_tokens": 4000,
+        "max_tokens": 8000,
     }
 
     api_key = os.getenv('GROQ_API_KEY')
@@ -74,21 +74,30 @@ Return a JSON object with a list of sections, each containing 'title' and 'conte
     data = response.json()
     # The LLM should return JSON in the content field
     content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
+    # Strip markdown fences if present
+    cleaned = content.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.split("\n", 1)[-1] if "\n" in cleaned else cleaned[3:]
+        cleaned = cleaned.rsplit("```", 1)[0].strip() if "```" in cleaned else cleaned
     try:
-        result = json.loads(content)
-        # Unwrap: if LLM nests sections inside a single "Strategy" section as escaped JSON
-        if "sections" in result and len(result["sections"]) == 1:
-            single = result["sections"][0]
-            if isinstance(single.get("content"), str):
-                try:
-                    inner = json.loads(single["content"])
-                    if "sections" in inner:
-                        result["sections"] = inner["sections"]
-                except json.JSONDecodeError:
-                    pass
+        result = json.loads(cleaned)
     except json.JSONDecodeError:
-        # If LLM returned plain text, wrap it in a single section
-        result = {"sections": [{"title": "Strategy", "content": content}]}
+        try:
+            result = json.loads(content)
+        except json.JSONDecodeError:
+            result = {"sections": [{"title": "Strategy", "content": content}]}
+    # Unwrap: if LLM nests sections inside a single "Strategy" section as escaped JSON
+    if "sections" in result and len(result["sections"]) == 1:
+        single = result["sections"][0]
+        if isinstance(single.get("content"), str):
+            try:
+                inner = json.loads(single["content"])
+                if "sections" in inner:
+                    result["sections"] = inner["sections"]
+                elif "title" in inner and "content" in inner:
+                    result["sections"] = [inner]
+            except json.JSONDecodeError:
+                pass
     print(json.dumps(result))
 
 if __name__ == "__main__":
