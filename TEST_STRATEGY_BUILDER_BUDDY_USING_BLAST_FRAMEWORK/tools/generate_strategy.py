@@ -1,6 +1,7 @@
 import os
 import json
 import re
+import time
 import httpx
 
 
@@ -77,8 +78,15 @@ Return a JSON object with a list of sections, each containing 'title' and 'conte
         "Content-Type": "application/json",
     }
 
-    response = httpx.post('https://api.groq.com/openai/v1/chat/completions', json=body, headers=headers, timeout=60)
-    response.raise_for_status()
+    max_retries = 5
+    for attempt in range(max_retries):
+        response = httpx.post('https://api.groq.com/openai/v1/chat/completions', json=body, headers=headers, timeout=60)
+        if response.status_code == 429:
+            wait = 2 ** attempt
+            time.sleep(wait)
+            continue
+        response.raise_for_status()
+        break
     data = response.json()
     # The LLM should return JSON in the content field
     content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
