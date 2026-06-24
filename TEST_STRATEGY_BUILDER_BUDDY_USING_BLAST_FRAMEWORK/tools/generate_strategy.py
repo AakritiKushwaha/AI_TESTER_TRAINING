@@ -54,7 +54,7 @@ Return a JSON object with a list of sections, each containing 'title' and 'conte
 
     # Build request body for GROQ
     body = {
-        "model": os.getenv('GROQ_API_MODEL', 'mixtral-8x7b-32768'),
+        "model": os.getenv('GROQ_API_MODEL', 'llama-3.3-70b-versatile'),
         "messages": [{"role": "system", "content": prompt}, {"role": "user", "content": json.dumps(jira_data)}],
         "temperature": 0.0,
         "max_tokens": 4000,
