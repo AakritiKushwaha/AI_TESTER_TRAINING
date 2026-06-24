@@ -22,6 +22,9 @@ def main(input_json: str):
     description = fields.get("description", "")
     if isinstance(description, dict) or isinstance(description, list):
         description = json.dumps(description)
+    # Truncate description to avoid GROQ 413 Payload Too Large
+    if len(description) > 3000:
+        description = description[:3000] + "\n...[truncated]"
 
     default_prompt = f"""You are an expert test-strategy writer. Using the provided Jira issue details ({jira_key}: {summary}), generate a comprehensive test-strategy document.
 
@@ -53,10 +56,14 @@ Return a JSON object with a list of sections, each containing 'title' and 'conte
 
     prompt = custom_prompt or default_prompt
 
+    # Build a slimmed-down user payload to avoid GROQ 413
+    slim_data = {"key": jira_key, "summary": summary, "description": description}
+    user_msg = json.dumps(slim_data)
+
     # Build request body for GROQ
     body = {
         "model": os.getenv('GROQ_API_MODEL', 'llama-3.3-70b-versatile'),
-        "messages": [{"role": "system", "content": prompt}, {"role": "user", "content": json.dumps(jira_data)}],
+        "messages": [{"role": "system", "content": prompt}, {"role": "user", "content": user_msg}],
         "temperature": 0.0,
         "max_tokens": 8000,
     }
@@ -70,7 +77,7 @@ Return a JSON object with a list of sections, each containing 'title' and 'conte
         "Content-Type": "application/json",
     }
 
-    response = httpx.post('https://api.groq.com/openai/v1/chat/completions', json=body, headers=headers, timeout=30)
+    response = httpx.post('https://api.groq.com/openai/v1/chat/completions', json=body, headers=headers, timeout=60)
     response.raise_for_status()
     data = response.json()
     # The LLM should return JSON in the content field
