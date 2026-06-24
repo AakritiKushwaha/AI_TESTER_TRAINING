@@ -53,6 +53,11 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jira_data: fetchedJiraData })
       });
+      if (!genRes.ok) {
+        const errData = await genRes.json().catch(() => ({}));
+        setError(errData.error || `Error generating strategy: ${genRes.statusText}`);
+        return;
+      }
       const genData = await genRes.json();
       setStrategy(genData);
       // Create DOCX
@@ -61,6 +66,11 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...genData, jiraId })
       });
+      if (!docxRes.ok) {
+        const errData = await docxRes.json().catch(() => ({}));
+        setError(errData.error || `Error generating document: ${docxRes.statusText}`);
+        return;
+      }
       const docxData = await docxRes.json();
       setDocx(docxData);
     } catch (e) {

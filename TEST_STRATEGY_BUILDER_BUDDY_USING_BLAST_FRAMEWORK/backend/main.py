@@ -64,7 +64,10 @@ async def generate_strategy(payload: dict):
     # Expect payload with jira_data and optional custom_prompt
     script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tools", "generate_strategy.py"))
     input_json = json.dumps(payload)
-    return run_tool(script_path, input_json)
+    try:
+        return run_tool(script_path, input_json)
+    except HTTPException as exc:
+        return JSONResponse(status_code=exc.status_code, content={"error": exc.detail, "status": exc.status_code})
 
 @app.get("/verify-env")
 async def verify_env():
@@ -77,7 +80,10 @@ async def verify_env():
 async def create_docx(payload: dict):
     script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tools", "create_docx.py"))
     input_json = json.dumps(payload)
-    return run_tool(script_path, input_json)
+    try:
+        return run_tool(script_path, input_json)
+    except HTTPException as exc:
+        return JSONResponse(status_code=exc.status_code, content={"error": exc.detail, "status": exc.status_code})
 
 FRONTEND_DIST = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
 
