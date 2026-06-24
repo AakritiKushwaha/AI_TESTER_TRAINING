@@ -96,8 +96,9 @@ Return a JSON object with a list of sections, each containing 'title' and 'conte
                     result["sections"] = inner["sections"]
                 elif "title" in inner and "content" in inner:
                     result["sections"] = [inner]
-            except json.JSONDecodeError:
-                pass
+            except Exception as e:
+                result["_inner_parse_error"] = str(e)
+                result["_inner_content_preview"] = single["content"][:200]
     # Attach debug info so we can see what happened
     result["_debug_section_count"] = len(result.get("sections", []))
     print(json.dumps(result))
