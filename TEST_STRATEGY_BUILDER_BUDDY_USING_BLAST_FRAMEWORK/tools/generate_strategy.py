@@ -1,5 +1,6 @@
 import os
 import json
+import re
 import httpx
 from urllib.parse import urlencode
 
@@ -90,17 +91,15 @@ Return a JSON object with a list of sections, each containing 'title' and 'conte
     if "sections" in result and len(result["sections"]) == 1:
         single = result["sections"][0]
         if isinstance(single.get("content"), str):
+            safe = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', single["content"])
             try:
-                inner = json.loads(single["content"])
+                inner = json.loads(safe)
                 if "sections" in inner:
                     result["sections"] = inner["sections"]
                 elif "title" in inner and "content" in inner:
                     result["sections"] = [inner]
-            except Exception as e:
-                result["_inner_parse_error"] = str(e)
-                result["_inner_content_preview"] = single["content"][:200]
-    # Attach debug info so we can see what happened
-    result["_debug_section_count"] = len(result.get("sections", []))
+            except json.JSONDecodeError:
+                pass
     print(json.dumps(result))
 
 if __name__ == "__main__":
