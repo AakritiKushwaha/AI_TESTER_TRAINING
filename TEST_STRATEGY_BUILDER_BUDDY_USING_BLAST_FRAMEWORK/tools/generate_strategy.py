@@ -76,6 +76,16 @@ Return a JSON object with a list of sections, each containing 'title' and 'conte
     content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
     try:
         result = json.loads(content)
+        # Unwrap: if LLM nests sections inside a single "Strategy" section as escaped JSON
+        if "sections" in result and len(result["sections"]) == 1:
+            single = result["sections"][0]
+            if isinstance(single.get("content"), str):
+                try:
+                    inner = json.loads(single["content"])
+                    if "sections" in inner:
+                        result["sections"] = inner["sections"]
+                except json.JSONDecodeError:
+                    pass
     except json.JSONDecodeError:
         # If LLM returned plain text, wrap it in a single section
         result = {"sections": [{"title": "Strategy", "content": content}]}
