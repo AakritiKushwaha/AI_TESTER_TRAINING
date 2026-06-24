@@ -98,6 +98,8 @@ Return a JSON object with a list of sections, each containing 'title' and 'conte
                     result["sections"] = [inner]
             except json.JSONDecodeError:
                 pass
+    # Attach debug info so we can see what happened
+    result["_debug_section_count"] = len(result.get("sections", []))
     print(json.dumps(result))
 
 if __name__ == "__main__":
