@@ -1,0 +1,13 @@
+.docx-preview {
+  max-width: 100%;
+  margin: 1rem 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.docx-preview canvas {
+  width: 100% !important;
+  height: auto !important;
+}

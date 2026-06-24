@@ -1,0 +1,53 @@
+/* StrategyDisplay.css */
+
+/* Glassmorphism card for displaying generated strategy */
+.strategy-display {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+  margin: 1rem auto;
+  max-width: 800px;
+  color: var(--text);
+  transition: transform 0.2s ease;
+  text-align: left;
+}
+
+.strategy-display p,
+.strategy-display li,
+.strategy-display ul,
+.strategy-display ol {
+  color: var(--text);
+}
+
+.strategy-main-title {
+  color: var(--text-h);
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+}
+
+.strategy-display:hover {
+  transform: translateY(-4px);
+}
+
+.section-title {
+  font-family: var(--heading);
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: var(--text-h);
+}
+
+.strategy-content {
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  color: var(--text);
+}
+

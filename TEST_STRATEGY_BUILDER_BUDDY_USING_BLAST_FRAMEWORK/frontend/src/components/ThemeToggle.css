@@ -1,0 +1,15 @@
+.theme-toggle-btn {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  background: var(--accent-bg);
+  color: var(--text-h);
+  border: 2px solid var(--accent);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s, color 0.3s;
+}
+
+.theme-toggle-btn:hover {
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
