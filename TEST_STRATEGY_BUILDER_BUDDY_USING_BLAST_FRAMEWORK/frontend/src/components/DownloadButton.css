@@ -1,0 +1,12 @@
+.download-btn {
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.download-btn:hover {
+  background: var(--accent-hover);
+}

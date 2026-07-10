@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-current.dtd">
+
+<suite name="RESTASSURED_PROJECT_USING_AI" parallel="false" thread-count="1">
+    <parameter name="environment" value="DEV"/>
+
+    <!-- Health Check Tests -->
+    <test name="Ping Tests">
+        <classes>
+            <class name="com.restassured.tests.PingTests"/>
+        </classes>
+    </test>
+
+    <!-- Authentication Tests -->
+    <test name="Authentication Tests">
+        <classes>
+            <class name="com.restassured.tests.AuthTests"/>
+        </classes>
+    </test>
+
+    <!-- Booking ID Retrieval Tests -->
+    <test name="Booking IDs Tests">
+        <classes>
+            <class name="com.restassured.tests.BookingIdsTests"/>
+        </classes>
+    </test>
+
+    <!-- Single Booking Retrieval Tests -->
+    <test name="Booking Get Tests">
+        <classes>
+            <class name="com.restassured.tests.BookingGetTests"/>
+        </classes>
+    </test>
+
+    <!-- Booking Creation Tests -->
+    <test name="Booking Create Tests">
+        <classes>
+            <class name="com.restassured.tests.BookingCreateTests"/>
+        </classes>
+    </test>
+
+    <!-- Booking Update/Patch Tests -->
+    <test name="Booking Update Tests">
+        <classes>
+            <class name="com.restassured.tests.BookingUpdateTests"/>
+        </classes>
+    </test>
+
+    <!-- Booking Deletion Tests -->
+    <test name="Booking Delete Tests">
+        <classes>
+            <class name="com.restassured.tests.BookingDeleteTests"/>
+        </classes>
+    </test>
+
+    <!-- Listeners for Allure Reporting -->
+    <listeners>
+        <listener class-name="io.qameta.allure.testng.AllureTestNg"/>
+    </listeners>
+</suite>
