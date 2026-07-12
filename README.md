@@ -1,6 +1,5 @@
 # AI Tester Training
-
-This workspace contains a collection of AI-assisted testing projects designed for hands-on learning, automation practice, and experimentation with modern test engineering tools.
+This workspace contains a collection of AI-assisted testing projects designed for hands-on learning, automation practice, and experimentation with modern test engineering tools.
 
 ## Projects Included
 
@@ -26,7 +25,22 @@ Highlights:
 - POJO-based request/response modeling
 - Logging, assertions, and test reporting
 
-### 3. Test Strategy Builder Buddy
+### 3. Advanced RAG Explorer (New!)
+Location: [RAGs/ADVANCE_RAG](RAGs/ADVANCE_RAG)
+
+An **end-to-end Advanced Retrieval-Augmented Generation (RAG)** application that ingests 5,000 VWO test cases, indexes them with hybrid (dense + sparse) vectors in Qdrant, and answers questions using a multi-stage pipeline with LLM generation. Built as a teaching demo for The Testing Academy.
+
+**Pipeline:** Query Rewriting → Hybrid Embedding (bge-m3) → Hybrid Search (Qdrant + RRF fusion) → Cross-Encoder Reranking → LLM Generation (DeepSeek Chat)
+
+Highlights:
+- 5-stage RAG pipeline with live UI tracking
+- Hybrid retrieval (dense + sparse vectors) for better search accuracy
+- Qdrant vector DB in embedded mode (no Docker needed)
+- Query auto-detection: answer mode vs generate mode
+- Interactive frontend with 4 tabs (Upload, Ingest, Chunks, Chat)
+- Standalone HTML explainer page with animated architecture diagrams
+
+### 4. Test Strategy Builder Buddy
 Location: [TEST_STRATEGY_BUILDER_BUDDY_USING_BLAST_FRAMEWORK](TEST_STRATEGY_BUILDER_BUDDY_USING_BLAST_FRAMEWORK)
 
 An AI-powered web application that generates professional test strategy documents from Jira tickets. It combines frontend, backend, and LLM integration to streamline strategy creation.
@@ -34,13 +48,15 @@ An AI-powered web application that generates professional test strategy document
 Highlights:
 - Jira input support
 - AI-generated strategy output
-- React + Vite frontend
+ - React + Vite frontend
 - FastAPI backend and LLM integration
 
 ## Repository Structure
 
 - [API_CONTRACT_VALIDATOR_FRONTEND_CALLING_LANGFLOW](API_CONTRACT_VALIDATOR_FRONTEND_CALLING_LANGFLOW) – AI-assisted API contract validation UI
-- [RESTASSURED_PROJECT_USING_AI](RESTASSURED_PROJECT_USING_AI) – REST Assured test automation framework
+- [RESTASSURED_PROJECT_USING_AI](RESTASSURED_PROJECT_USING_AI) � REST Assured test automation framework
+- [RAGs/ADVANCE_RAG](RAGs/ADVANCE_RAG) – Advanced RAG system for VWO test case retrieval and generation
+- [RAGs/BASIC RAG](RAGs/BASIC%20RAG) � Basic RAG implementation
 - [TEST_STRATEGY_BUILDER_BUDDY_USING_BLAST_FRAMEWORK](TEST_STRATEGY_BUILDER_BUDDY_USING_BLAST_FRAMEWORK) – AI-driven test strategy generation tool
 
 ## How to Use This Workspace

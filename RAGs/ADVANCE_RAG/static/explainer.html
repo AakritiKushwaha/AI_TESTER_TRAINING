@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Advanced RAG — Explained</title>
+<style>
+  :root {
+    --cream: #F5F0EB; --cream-dark: #EDE5DC;
+    --coral: #E8756A; --coral-dark: #D45A4F; --coral-light: #F4A69A;
+    --text: #2C2C2C; --text-light: #6B6B6B; --card-bg: #FFFFFF;
+    --border: #E0D6CC; --accent-green: #6BCB77; --accent-blue: #4D96FF;
+    --accent-purple: #9B59B6; --accent-amber: #F39C12;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, sans-serif;
+    background: var(--cream); color: var(--text); line-height: 1.6;
+  }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, var(--coral-dark) 0%, var(--coral) 50%, var(--coral-light) 100%);
+    color: white; text-align: center; padding: 60px 24px 50px;
+    position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 50%);
+    animation: heroDrift 20s linear infinite;
+  }
+  @keyframes heroDrift { 0% { transform: translate(0,0); } 50% { transform: translate(5%,5%); } 100% { transform: translate(0,0); } }
+  .hero h1 { font-size: 42px; font-weight: 800; position: relative; letter-spacing: -1px; }
+  .hero p { font-size: 18px; opacity: 0.9; margin-top: 8px; position: relative; }
+
+  .container { max-width: 1000px; margin: 0 auto; padding: 32px 24px; }
+
+  /* Section */
+  .section { margin-bottom: 48px; }
+  .section h2 {
+    font-size: 24px; font-weight: 700; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section h2 .num {
+    background: var(--coral); color: white; width: 32px; height: 32px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px; margin-bottom: 16px;
+  }
+  .card h3 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+
+  /* Pipeline diagram */
+  .pipeline { display: flex; align-items: center; justify-content: center; gap: 4px; flex-wrap: wrap; padding: 24px 0; }
+  .pipe-node {
+    background: var(--card-bg); border: 2px solid var(--border); border-radius: 10px;
+    padding: 14px 18px; text-align: center; min-width: 110px;
+    transition: all 0.3s;
+  }
+  .pipe-node:hover { border-color: var(--coral); transform: translateY(-3px); box-shadow: 0 4px 12px rgba(232,117,106,0.15); }
+  .pipe-node .icon { font-size: 28px; margin-bottom: 4px; }
+  .pipe-node .label { font-size: 12px; font-weight: 600; }
+  .pipe-arrow { font-size: 22px; color: var(--coral-light); font-weight: 300; }
+
+  /* Animated flow */
+  .flow-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 16px 0; }
+  .flow-box {
+    flex: 1; min-width: 100px; text-align: center;
+    background: var(--cream); border-radius: 8px; padding: 12px; font-size: 13px;
+    border: 1px solid var(--border); position: relative;
+  }
+  .flow-box.highlight { border-color: var(--coral); background: rgba(232,117,106,0.05); }
+  .flow-connector { font-size: 18px; color: var(--coral-light); }
+
+  /* Tech badges */
+  .badge {
+    display: inline-block; padding: 4px 12px; border-radius: 6px;
+    font-size: 13px; font-weight: 600; margin: 3px;
+  }
+  .badge-model { background: #E8F4FD; color: #2B6CB0; }
+  .badge-db { background: #F0FFF4; color: #276749; }
+  .badge-api { background: #FFF5F5; color: #C53030; }
+  .badge-ui { background: #FEF9E7; color: #7D6608; }
+
+  /* Stats */
+  .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+  .stat-card {
+    text-align: center; padding: 18px; border-radius: 10px;
+    background: var(--card-bg); border: 1px solid var(--border);
+  }
+  .stat-card .value { font-size: 28px; font-weight: 700; color: var(--coral); }
+  .stat-card .label { font-size: 12px; color: var(--text-light); margin-top: 4px; }
+
+  /* Accordion */
+  .accordion { margin-top: 12px; }
+  .accordion-item { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; overflow: hidden; }
+  .accordion-header {
+    padding: 14px 18px; background: var(--cream); cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
+    font-weight: 600; font-size: 14px; transition: background 0.15s;
+  }
+  .accordion-header:hover { background: var(--cream-dark); }
+  .accordion-header .arrow { transition: transform 0.2s; font-size: 12px; }
+  .accordion-item.open .accordion-header .arrow { transform: rotate(180deg); }
+  .accordion-body { padding: 0 18px; max-height: 0; overflow: hidden; transition: all 0.3s; }
+  .accordion-item.open .accordion-body { padding: 14px 18px; max-height: 500px; }
+
+  /* Animation */
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .animate { animation: fadeInUp 0.6s ease-out; }
+
+  /* Flow particles */
+  .particle-container { position: relative; height: 60px; overflow: hidden; margin: 16px 0; }
+  .particle {
+    position: absolute; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--coral); opacity: 0.6;
+    animation: particleFlow 3s ease-in-out infinite;
+  }
+  .particle:nth-child(1) { left: 10%; animation-delay: 0s; }
+  .particle:nth-child(2) { left: 30%; animation-delay: 0.5s; background: var(--accent-blue); }
+  .particle:nth-child(3) { left: 50%; animation-delay: 1s; background: var(--accent-green); }
+  .particle:nth-child(4) { left: 70%; animation-delay: 1.5s; background: var(--accent-purple); }
+  .particle:nth-child(5) { left: 90%; animation-delay: 2s; }
+  @keyframes particleFlow {
+    0% { top: 100%; opacity: 0; transform: scale(0); }
+    30% { opacity: 0.8; transform: scale(1); }
+    70% { opacity: 0.8; transform: scale(1); }
+    100% { top: 0%; opacity: 0; transform: scale(0); }
+  }
+
+  @media (max-width: 640px) {
+    .hero h1 { font-size: 28px; }
+    .pipeline { flex-direction: column; }
+    .pipe-arrow { transform: rotate(90deg); }
+  }
+
+  .highlight-coral { color: var(--coral); font-weight: 600; }
+  .code { background: var(--cream); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>✦ Advanced RAG Explorer</h1>
+  <p>End-to-end hybrid retrieval system for 5,000 VWO test cases</p>
+</div>
+
+<div class="container">
+
+  <!-- What is RAG -->
+  <div class="section animate">
+    <h2><span class="num">1</span> What is Retrieval-Augmented Generation?</h2>
+    <div class="card">
+      <p><strong>RAG</strong> combines information retrieval with LLM generation. Instead of asking a model to answer from its training data alone, we:</p>
+      <div class="flow-row" style="margin-top: 16px;">
+        <div class="flow-box highlight">
+          <div style="font-size: 28px;">🔍</div>
+          <strong>Retrieve</strong><br><span style="font-size: 11px;">Find relevant documents</span>
+        </div>
+        <div class="flow-connector">→</div>
+        <div class="flow-box highlight">
+          <div style="font-size: 28px;">🔗</div>
+          <strong>Augment</strong><br><span style="font-size: 11px;">Add context to prompt</span>
+        </div>
+        <div class="flow-connector">→</div>
+        <div class="flow-box highlight">
+          <div style="font-size: 28px;">🤖</div>
+          <strong>Generate</strong><br><span style="font-size: 11px;">LLM answers with citations</span>
+        </div>
+      </div>
+      <p style="margin-top: 16px; font-size: 14px; color: var(--text-light);">
+        This approach grounds LLM responses in <strong>verified data</strong>, eliminating hallucinations
+        and enabling question-answering over private corpora.
+      </p>
+    </div>
+  </div>
+
+  <!-- Architecture -->
+  <div class="section animate">
+    <h2><span class="num">2</span> System Architecture</h2>
+    <div class="card">
+      <h3>Two-Stage Pipeline</h3>
+      <p style="font-size: 14px; color: var(--text-light); margin-bottom: 12px;">
+        The system operates in two distinct phases: <strong>Ingestion</strong> (one-time) and <strong>Chat</strong> (per query).
+      </p>
+
+      <h4 style="font-size: 14px; margin-bottom: 8px;">📥 Ingestion Pipeline</h4>
+      <div class="pipeline">
+        <div class="pipe-node"><div class="icon">📁</div><div class="label">CSV/XLSX</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node"><div class="icon">📋</div><div class="label">Parse Rows</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node"><div class="icon">✂️</div><div class="label">Chunk</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node" style="border-color: var(--accent-blue);"><div class="icon">🧠</div><div class="label">bge-m3 Embed</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node" style="border-color: var(--accent-green);"><div class="icon">🗄️</div><div class="label">Qdrant</div></div>
+      </div>
+
+      <h4 style="font-size: 14px; margin: 16px 0 8px;">💬 Chat Pipeline (per query)</h4>
+      <div class="pipeline">
+        <div class="pipe-node"><div class="icon">❓</div><div class="label">Question</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node"><div class="icon">✏️</div><div class="label">Rewrite ×3</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node" style="border-color: var(--accent-blue);"><div class="icon">🧠</div><div class="label">bge-m3 Embed</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node" style="border-color: var(--accent-green);"><div class="icon">🔎</div><div class="label">Hybrid Search</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node"><div class="icon">⚡</div><div class="label">RRF Fuse</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node" style="border-color: var(--accent-purple);"><div class="icon">🎯</div><div class="label">Re-rank</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node" style="border-color: var(--accent-amber);"><div class="icon">🤖</div><div class="label">LLM Answer</div></div>
+      </div>
+
+      <div class="particle-container">
+        <div class="particle"></div><div class="particle"></div><div class="particle"></div><div class="particle"></div><div class="particle"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Components deep dive -->
+  <div class="section animate">
+    <h2><span class="num">3</span> Components Deep Dive</h2>
+
+    <div class="accordion">
+
+      <div class="accordion-item open">
+        <div class="accordion-header" onclick="this.parentElement.classList.toggle('open')">
+          <span>🔍 Hybrid Retrieval — bge-m3</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="accordion-body">
+          <p><strong>BAAI/bge-m3</strong> is a multi-vector encoder that produces both:</p>
+          <ul style="margin: 8px 0 8px 20px; font-size: 14px;">
+            <li><strong>Dense vectors</strong> (1024-dim) — semantic understanding</li>
+            <li><strong>Sparse vectors</strong> (vocab-size) — exact token matching</li>
+          </ul>
+          <p style="font-size: 14px;">This is <span class="highlight-coral">hybrid retrieval</span> — the best of both worlds. Dense captures meaning ("create campaign" ≈ "set up experiment"), sparse captures precision ("VWO-1234" matches exactly).</p>
+          <div style="margin-top: 10px;">
+            <span class="badge badge-model">BAAI/bge-m3</span>
+            <span class="badge badge-model">~2.3 GB</span>
+            <span class="badge badge-model">1024-dim dense</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-header" onclick="this.parentElement.classList.toggle('open')">
+          <span>🗄️ Vector Database — Qdrant</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="accordion-body">
+          <p><strong>Qdrant</strong> is a high-performance vector database that natively supports:</p>
+          <ul style="margin: 8px 0 8px 20px; font-size: 14px;">
+            <li><strong>Dense + sparse vectors</strong> in the same collection</li>
+            <li><strong>Payload filtering</strong> — filter by priority, module, JIRA ID</li>
+            <li><strong>Embedded mode</strong> — runs as a file store, no Docker required</li>
+            <li><strong>Batch search</strong> — search both dense and sparse in one call</li>
+          </ul>
+          <p style="font-size: 14px;">The collection <code class="code">vwo_test_cases</code> stores each chunk with its dense vector, sparse vector, and metadata payload.</p>
+          <div style="margin-top: 10px;">
+            <span class="badge badge-db">Qdrant</span>
+            <span class="badge badge-db">Embedded</span>
+            <span class="badge badge-db">./qdrant_data</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-header" onclick="this.parentElement.classList.toggle('open')">
+          <span>⚡ Reciprocal Rank Fusion (RRF)</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="accordion-body">
+          <p>RRF combines the rankings from dense and sparse searches into a single ranked list:</p>
+          <pre style="background: var(--cream); padding: 12px; border-radius: 8px; margin: 8px 0; font-size: 13px; overflow-x: auto;">
+RRFscore(d) = Σ₁/(k + rank(d))
+
+Where k = 60 (smoothing constant)
+          </pre>
+          <p style="font-size: 14px;">This prevents either method from dominating — a document that ranks highly in both searches gets a much better score than one that ranks highly in only one.</p>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-header" onclick="this.parentElement.classList.toggle('open')">
+          <span>🎯 Cross-Encoder Re-ranking</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="accordion-body">
+          <p><strong>BAAI/bge-reranker-v2-m3</strong> is a cross-encoder that evaluates query-document pairs jointly (not just vector similarity).</p>
+          <ul style="margin: 8px 0 8px 20px; font-size: 14px;">
+            <li>Takes the top 20 candidates from hybrid search</li>
+            <li>Scores each pair <code class="code">(query, doc)</code> with full attention</li>
+            <li>Returns the top 4 most relevant chunks for the LLM</li>
+            <li><strong>~570 MB</strong> model, loaded on demand</li>
+          </ul>
+          <p style="font-size: 14px; margin-top: 8px;">This is <span class="highlight-coral">significantly more accurate</span> than bi-encoder similarity, but slower — so we only run it on the top candidates.</p>
+          <div style="margin-top: 10px;">
+            <span class="badge badge-model">BAAI/bge-reranker-v2-m3</span>
+            <span class="badge badge-model">Cross-encoder</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-header" onclick="this.parentElement.classList.toggle('open')">
+          <span>✏️ Query Rewriting</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="accordion-body">
+          <p>Before searching, we generate <strong>3 alternative phrasings</strong> of the user's question using a fast LLM via Openrouter:</p>
+          <div style="background: var(--cream); padding: 12px; border-radius: 8px; margin: 8px 0; font-size: 13px;">
+            <strong>Original:</strong> "How do I create an A/B test campaign?"<br>
+            <strong>Rewrites:</strong>
+            <ul style="margin: 4px 0 0 20px;">
+              <li>"steps to set up an A/B test campaign"</li>
+              <li>"A/B campaign creation workflow"</li>
+              <li>"how to launch a split test experiment"</li>
+            </ul>
+          </div>
+          <p style="font-size: 14px;">This captures different phrasings and increases recall — the same question asked differently might match different chunks.</p>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-header" onclick="this.parentElement.classList.toggle('open')">
+          <span>🤖 LLM Generation (Openrouter)</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="accordion-body">
+          <p>The final step uses <strong>DeepSeek Chat</strong> (via Openrouter) to generate a grounded answer from the retrieved chunks.</p>
+          <p style="font-size: 14px; margin-top: 8px;">Two modes are auto-detected:</p>
+          <ul style="margin: 8px 0 8px 20px; font-size: 14px;">
+            <li><strong>Answer mode</strong> — answers questions with <code class="code">[Chunk N]</code> citations</li>
+            <li><strong>Generate mode</strong> — creates structured test cases using retrieved templates</li>
+          </ul>
+          <p style="font-size: 14px;">The system prompt enforces grounded answers — the LLM <span class="highlight-coral">must</span> use only the provided context.</p>
+          <div style="margin-top: 10px;">
+            <span class="badge badge-api">Openrouter</span>
+            <span class="badge badge-api">DeepSeek</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Tech Stack -->
+  <div class="section animate">
+    <h2><span class="num">4</span> Tech Stack</h2>
+    <div class="stat-row">
+      <div class="stat-card"><div class="value">Python</div><div class="label">Backend (FastAPI)</div></div>
+      <div class="stat-card"><div class="value">Qdrant</div><div class="label">Vector Database</div></div>
+      <div class="stat-card"><div class="value">bge-m3</div><div class="label">Hybrid Embeddings</div></div>
+      <div class="stat-card"><div class="value">bge-reranker</div><div class="label">Cross-Encoder</div></div>
+      <div class="stat-card"><div class="value">Openrouter</div><div class="label">LLM Gateway</div></div>
+      <div class="stat-card"><div class="value">5,000</div><div class="label">VWO Test Cases</div></div>
+    </div>
+  </div>
+
+  <!-- Architecture diagram -->
+  <div class="section animate">
+    <h2><span class="num">5</span> Data Flow Diagram</h2>
+    <div class="card" style="text-align: center;">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 20px;">
+
+        <div style="background: var(--cream); border-radius: 10px; padding: 14px 24px; border: 1px solid var(--border);">
+          <strong>📁 CSV</strong><br><span style="font-size: 12px;">5,000 test cases</span>
+        </div>
+        <div style="font-size: 20px; color: var(--coral);">↓</div>
+        <div style="background: var(--cream); border-radius: 10px; padding: 14px 24px; border: 2px solid var(--accent-blue);">
+          <strong>🧠 bge-m3 Encoder</strong><br><span style="font-size: 12px;">Dense (1024) + Sparse vectors</span>
+        </div>
+        <div style="font-size: 20px; color: var(--coral);">↓</div>
+        <div style="background: var(--cream); border-radius: 10px; padding: 14px 24px; border: 2px solid var(--accent-green);">
+          <strong>🗄️ Qdrant</strong><br><span style="font-size: 12px;">Collection: vwo_test_cases</span>
+        </div>
+        <div style="font-size: 20px; color: var(--coral);">↓</div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
+          <div style="background: var(--card-bg); border-radius: 8px; padding: 10px 16px; border: 1px solid var(--border); font-size: 13px;">
+            ❓ Query → ✏️ Rewrite ×3
+          </div>
+          <div style="font-size: 18px; color: var(--coral-light);">→</div>
+          <div style="background: var(--card-bg); border-radius: 8px; padding: 10px 16px; border: 1px solid var(--border); font-size: 13px;">
+            🔍 Dense + Sparse Search
+          </div>
+          <div style="font-size: 18px; color: var(--coral-light);">→</div>
+          <div style="background: var(--card-bg); border-radius: 8px; padding: 10px 16px; border: 1px solid var(--border); font-size: 13px;">
+            ⚡ RRF Fuse
+          </div>
+          <div style="font-size: 18px; color: var(--coral-light);">→</div>
+          <div style="background: var(--card-bg); border-radius: 8px; padding: 10px 16px; border: 1px solid var(--border); font-size: 13px; border-color: var(--accent-purple);">
+            🎯 Re-rank (Top 4)
+          </div>
+          <div style="font-size: 18px; color: var(--coral-light);">→</div>
+          <div style="background: var(--card-bg); border-radius: 8px; padding: 10px 16px; border: 1px solid var(--border); font-size: 13px; border-color: var(--accent-amber);">
+            🤖 DeepSeek Answer
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- The Data -->
+  <div class="section animate">
+    <h2><span class="num">6</span> The Data — 5,000 VWO Test Cases</h2>
+    <div class="card">
+      <p>The corpus consists of <strong>5,000 realistic test cases</strong> for VWO (Visual Website Optimizer), an A/B testing platform. Test cases span <strong>10 modules</strong>:</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0;">
+        <span class="badge badge-model">Campaign Management</span>
+        <span class="badge badge-db">User Segmentation</span>
+        <span class="badge badge-api">Reporting & Analytics</span>
+        <span class="badge badge-ui">Integrations</span>
+        <span class="badge badge-model">Account Settings</span>
+        <span class="badge badge-db">User Management</span>
+        <span class="badge badge-api">Billing</span>
+        <span class="badge badge-ui">API & Webhooks</span>
+        <span class="badge badge-model">Audience Targeting</span>
+        <span class="badge badge-db">Personalization</span>
+      </div>
+      <p style="font-size: 14px; color: var(--text-light);">Each test case includes: JIRA ID, title, steps, expected results, priority (P0-P3), module, tags, and preconditions.</p>
+    </div>
+  </div>
+
+  <!-- UI -->
+  <div class="section animate">
+    <h2><span class="num">7</span> User Interface</h2>
+    <div class="card">
+      <div class="stat-row" style="margin-bottom: 12px;">
+        <div class="stat-card"><div class="value">📁</div><div class="label">Upload</div></div>
+        <div class="stat-card"><div class="value">📊</div><div class="label">Ingest (live SSE)</div></div>
+        <div class="stat-card"><div class="value">📄</div><div class="label">Chunk Viewer</div></div>
+        <div class="stat-card"><div class="value">💬</div><div class="label">Chat</div></div>
+      </div>
+      <p>The UI uses a <strong>Claude-inspired theme</strong> (warm cream + coral) with a two-pane layout:</p>
+      <ul style="margin: 8px 0 0 20px; font-size: 14px;">
+        <li><strong>Left pane</strong> — Pipeline stage tracker (live status per query)</li>
+        <li><strong>Right pane</strong> — Chat interface with streaming results</li>
+      </ul>
+      <p style="margin-top: 8px; font-size: 14px;">Each chat turn shows: query rewrites, dense vs sparse comparison, re-rank before/after, and the final grounded answer with chunk citations.</p>
+    </div>
+  </div>
+
+  <!-- Tunables -->
+  <div class="section animate">
+    <h2><span class="num">8</span> Configuration Tunables</h2>
+    <div class="card">
+      <table>
+        <thead><tr><th>Parameter</th><th>Default</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code class="code">CHUNK_SIZE</code></td><td>1000</td><td>Max characters per chunk</td></tr>
+          <tr><td><code class="code">CHUNK_OVERLAP</code></td><td>150</td><td>Overlap between adjacent chunks</td></tr>
+          <tr><td><code class="code">TOP_N_HYBRID</code></td><td>20</td><td>Candidates per dense/sparse search</td></tr>
+          <tr><td><code class="code">TOP_K_RERANK</code></td><td>4</td><td>Final chunks sent to LLM</td></tr>
+          <tr><td><code class="code">RRF_K</code></td><td>60</td><td>RRF smoothing constant</td></tr>
+          <tr><td><code class="code">REWRITE_ENABLED</code></td><td>True</td><td>Enable query rewriting</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Setup -->
+  <div class="section animate">
+    <h2><span class="num">9</span> Running It Yourself</h2>
+    <div class="card">
+      <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 10px; font-size: 13px; overflow-x: auto;">
+# 1. Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Set your API key in .env
+#    OPENROUTER_API_KEY=sk-...
+
+# 4. Run the app
+python app.py
+# Open http://localhost:5050
+
+# 5. (Optional) In压 test cases via CLI
+python ingest.py testcase/vwo_test_cases.csv \
+  --text-cols title,steps,expected \
+  --meta-cols id,jira_id,priority,module,tags
+      </pre>
+      <p style="margin-top: 8px; font-size: 13px; color: var(--text-light);">
+        Qdrant runs in embedded mode by default — no Docker needed. Data is stored in <code class="code">./qdrant_data</code>.
+      </p>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="text-align: center; padding: 32px 0; color: var(--text-light); font-size: 13px;">
+    <p>Built with <span class="highlight-coral">♥</span> for The Testing Academy</p>
+    <p style="margin-top: 4px;">Advanced RAG Explorer — Hybrid Retrieval • Re-ranking • Query Rewriting • LLM Generation</p>
+  </div>
+
+</div>
+
+<script>
+  // Intersection Observer for animations
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('animate');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.section').forEach(s => {
+    s.classList.remove('animate');
+    observer.observe(s);
+  });
+</script>
+</body>
+</html>

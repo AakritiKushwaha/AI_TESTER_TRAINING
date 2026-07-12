@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Advanced RAG Explorer</title>
+<style>
+  :root {
+    --cream: #F5F0EB;
+    --cream-dark: #EDE5DC;
+    --coral: #E8756A;
+    --coral-dark: #D45A4F;
+    --coral-light: #F4A69A;
+    --text: #2C2C2C;
+    --text-light: #6B6B6B;
+    --card-bg: #FFFFFF;
+    --border: #E0D6CC;
+    --accent-green: #6BCB77;
+    --accent-blue: #4D96FF;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* Nav */
+  .nav {
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav h1 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--coral);
+    letter-spacing: -0.3px;
+  }
+  .nav-links {
+    display: flex;
+    gap: 4px;
+  }
+  .nav-links a {
+    text-decoration: none;
+    color: var(--text-light);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .nav-links a:hover { background: var(--cream); color: var(--text); }
+  .nav-links a.active { background: var(--coral); color: white; }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+  /* Cards */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card h2 { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 18px; border: none; border-radius: 8px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-primary { background: var(--coral); color: white; }
+  .btn-primary:hover { background: var(--coral-dark); }
+  .btn-secondary { background: var(--cream); color: var(--text); }
+  .btn-secondary:hover { background: var(--cream-dark); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Inputs */
+  input, select, textarea {
+    font-family: inherit; font-size: 14px;
+    padding: 8px 12px; border: 1px solid var(--border);
+    border-radius: 8px; background: white;
+    width: 100%; transition: border-color 0.15s;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none; border-color: var(--coral); box-shadow: 0 0 0 3px rgba(232,117,106,0.1);
+  }
+
+  /* Upload area */
+  .upload-area {
+    border: 2px dashed var(--border);
+    border-radius: 12px; padding: 40px; text-align: center;
+    transition: all 0.15s; cursor: pointer;
+  }
+  .upload-area:hover, .upload-area.dragover {
+    border-color: var(--coral); background: rgba(232,117,106,0.03);
+  }
+  .upload-area .icon { font-size: 40px; margin-bottom: 12px; color: var(--coral-light); }
+  .upload-area p { color: var(--text-light); font-size: 14px; }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 8px 12px; background: var(--cream); font-weight: 600; border-bottom: 1px solid var(--border); }
+  td { padding: 8px 12px; border-bottom: 1px solid var(--cream-dark); }
+
+  /* Two-pane chat layout */
+  .chat-layout { display: grid; grid-template-columns: 320px 1fr; gap: 16px; min-height: 70vh; }
+  .pipeline-pane { overflow-y: auto; }
+  .chat-pane { display: flex; flex-direction: column; }
+  .messages { flex: 1; overflow-y: auto; max-height: 60vh; padding: 8px 0; }
+  .msg { padding: 12px 16px; margin-bottom: 8px; border-radius: 10px; font-size: 14px; line-height: 1.5; }
+  .msg-user { background: var(--cream); margin-left: 40px; }
+  .msg-assistant { background: var(--card-bg); border: 1px solid var(--border); margin-right: 40px; }
+  .msg-input { display: flex; gap: 8px; margin-top: 12px; }
+
+  /* Pipeline stages */
+  .stage { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; margin-bottom: 6px; font-size: 13px; border: 1px solid transparent; transition: all 0.2s; }
+  .stage .status { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+  .stage.pending .status { background: var(--cream-dark); color: var(--text-light); }
+  .stage.active .status { background: var(--coral); color: white; animation: pulse 1.5s infinite; }
+  .stage.completed .status { background: var(--accent-green); color: white; }
+  .stage.active { border-color: var(--coral); background: rgba(232,117,106,0.05); }
+  .stage.completed { border-color: var(--accent-green); background: rgba(107,203,119,0.05); }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+  /* Progress bar */
+  .progress-bar { height: 6px; background: var(--cream-dark); border-radius: 3px; overflow: hidden; margin: 8px 0; }
+  .progress-fill { height: 100%; background: var(--coral); border-radius: 3px; transition: width 0.3s; }
+
+  /* Chunk viewer */
+  .chunk-card {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px; margin-bottom: 10px;
+    font-size: 13px; line-height: 1.5;
+  }
+  .chunk-card .meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+  .chunk-card .badge {
+    padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;
+  }
+  .badge-module { background: #E8F4FD; color: #2B6CB0; }
+  .badge-priority { background: #FFF5F5; color: #C53030; }
+  .badge-jira { background: #F0FFF4; color: #276749; }
+
+  .tab-bar { display: flex; gap: 4px; margin-bottom: 16px; background: var(--cream-dark); padding: 4px; border-radius: 8px; }
+  .tab-bar .tab { padding: 6px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; background: transparent; color: var(--text-light); transition: all 0.15s; }
+  .tab-bar .tab.active { background: white; color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .tab-bar .tab:hover:not(.active) { color: var(--text); }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .loading-spinner {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid var(--cream-dark); border-top-color: var(--coral);
+    border-radius: 50%; animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+  .stat-box { text-align: center; padding: 14px; background: var(--cream); border-radius: 8px; }
+  .stat-box .value { font-size: 22px; font-weight: 700; color: var(--coral); }
+  .stat-box .label { font-size: 12px; color: var(--text-light); margin-top: 4px; }
+
+  .filter-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .filter-row input, .filter-row select { width: auto; min-width: 160px; }
+
+  pre { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; white-space: pre-wrap; }
+
+  .coral-outline { border: 2px solid var(--coral); }
+
+  .rewrite-bubble {
+    background: var(--cream); border-radius: 8px; padding: 8px 12px;
+    font-size: 12px; margin: 4px 0; display: inline-block;
+  }
+
+  @media (max-width: 768px) {
+    .chat-layout { grid-template-columns: 1fr; }
+    .nav-links { gap: 2px; }
+    .nav-links a { padding: 4px 8px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <h1>✦ RAG Explorer</h1>
+  <div class="nav-links">
+    <a href="#" data-tab="upload" class="active">Upload</a>
+    <a href="#" data-tab="ingest">Ingest</a>
+    <a href="#" data-tab="chunks">Chunks</a>
+    <a href="#" data-tab="chat">Chat</a>
+    <a href="/explainer" target="_blank">About</a>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- UPLOAD -->
+  <div id="page-upload" class="page active">
+    <div class="card">
+      <h2>📁 Upload Test Cases</h2>
+      <p style="color: var(--text-light); font-size: 14px; margin-bottom: 16px;">
+        Upload a CSV or XLSX file containing VWO test cases. Use our pre-generated
+        <code style="background: var(--cream); padding: 2px 6px; border-radius: 4px;">vwo_test_cases.csv</code>
+        (5,000 test cases) or your own.
+      </p>
+      <div class="upload-area" id="uploadArea">
+        <div class="icon">📄</div>
+        <p><strong>Click to upload</strong> or drag and drop</p>
+        <p style="font-size: 12px; margin-top: 4px;">CSV or XLSX files only</p>
+        <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" hidden>
+      </div>
+    </div>
+    <div id="uploadPreview" class="card" style="display:none;">
+      <h2>Preview</h2>
+      <div class="stat-grid" id="previewStats"></div>
+      <div style="overflow-x:auto; margin-top: 12px;" id="previewTable"></div>
+      <div style="margin-top: 12px;">
+        <label style="font-size: 13px; font-weight: 600;">Text columns (for embedding):</label>
+        <input id="textCols" value="title,steps,expected" style="margin: 4px 0 8px;">
+        <label style="font-size: 13px; font-weight: 600;">Metadata columns (for filtering):</label>
+        <input id="metaCols" value="id,jira_id,priority,module,tags" style="margin: 4px 0 8px;">
+        <button class="btn btn-primary" id="ingestBtn">🚀 Start Ingestion</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>⚡ Quick Start</h2>
+      <p style="font-size: 13px; color: var(--text-light);">
+        Prefer to use the pre-generated CSV directly?
+        <button class="btn btn-secondary" id="quickIngestBtn" style="margin-top: 8px;">
+          Ingest vwo_test_cases.csv directly
+        </button>
+      </p>
+    </div>
+  </div>
+
+  <!-- INGEST -->
+  <div id="page-ingest" class="page">
+    <div class="card">
+      <h2>📊 Ingestion Pipeline</h2>
+      <p style="font-size: 13px; color: var(--text-light); margin-bottom: 12px;">
+        Live progress of the RAG ingestion pipeline: read → build docs → chunk → embed → index.
+      </p>
+      <div id="stageList">
+        <div class="stage pending" data-stage="read"><span class="status">1</span> Read file</div>
+        <div class="stage pending" data-stage="build_docs"><span class="status">2</span> Build documents</div>
+        <div class="stage pending" data-stage="chunk"><span class="status">3</span> Chunk documents</div>
+        <div class="stage pending" data-stage="embed"><span class="status">4</span> Embed (bge-m3)</div>
+        <div class="stage pending" data-stage="index"><span class="status">5</span> Index into Qdrant</div>
+      </div>
+      <div id="stageDetails" style="margin-top: 12px; font-size: 13px;"></div>
+    </div>
+    <div id="ingestResults" class="card" style="display:none;">
+      <h2>✅ Ingestion Complete</h2>
+      <div class="stat-grid" id="ingestStats"></div>
+    </div>
+  </div>
+
+  <!-- CHUNKS -->
+  <div id="page-chunks" class="page">
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h2 style="margin-bottom: 0;">📄 Chunk Viewer</h2>
+        <span id="chunkCount" style="font-size: 13px; color: var(--text-light);">0 total</span>
+      </div>
+      <div class="filter-row">
+        <input id="chunkSearch" placeholder="Search title / text / JIRA..." style="flex: 1;">
+        <select id="chunkModule"><option value="">All Modules</option></select>
+        <select id="chunkPriority"><option value="">All Priorities</option>
+          <option>P0</option><option>P1</option><option>P2</option><option>P3</option>
+        </select>
+        <button class="btn btn-secondary" id="chunkFilterBtn">Filter</button>
+      </div>
+      <div id="chunkList"></div>
+      <div style="text-align: center; margin-top: 12px;">
+        <button class="btn btn-secondary" id="chunkLoadMore">Load More</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT -->
+  <div id="page-chat" class="page">
+    <div class="chat-layout">
+      <div class="pipeline-pane">
+        <div class="card" style="margin-bottom: 0;">
+          <h2 style="font-size: 14px;">Pipeline Stages</h2>
+          <div id="chatStages">
+            <div class="stage pending" data-stage="rewrite"><span class="status">1</span> Query Rewrite</div>
+            <div class="stage pending" data-stage="embed"><span class="status">2</span> Embed Query</div>
+            <div class="stage pending" data-stage="hybrid_search"><span class="status">3</span> Hybrid Search</div>
+            <div class="stage pending" data-stage="rerank"><span class="status">4</span> Re-rank</div>
+            <div class="stage pending" data-stage="generate"><span class="status">5</span> Generate</div>
+          </div>
+          <div id="pipelineDetails" style="margin-top: 8px; font-size: 12px; color: var(--text-light);"></div>
+        </div>
+      </div>
+      <div class="chat-pane">
+        <div class="card" style="display: flex; flex-direction: column; flex: 1; margin-bottom: 0;">
+          <h2 style="font-size: 14px;">💬 Chat</h2>
+          <div class="messages" id="chatMessages">
+            <div class="msg msg-assistant">
+              Ask me anything about VWO test cases!<br>
+              <span style="font-size: 12px; color: var(--text-light);">
+                Try: <em>"How do I set up an A/B campaign?"</em> or <em>"Generate a new test case for login"</em>
+              </span>
+            </div>
+          </div>
+          <div class="msg-input">
+            <input id="chatInput" placeholder="Ask about VWO test cases..." style="flex: 1;">
+            <button class="btn btn-primary" id="chatSend">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// State
+// ============================================================
+const STATE = {
+  uploadedFile: null,
+  uploadedFilePath: null,
+  currentTab: 'upload',
+  chunks: [],
+  chunkOffset: null,
+  chunkLimit: 50,
+  messages: [],
+  isChatting: false,
+};
+
+// ============================================================
+// Navigation
+// ============================================================
+document.querySelectorAll('[data-tab]').forEach(el => {
+  el.addEventListener('click', (e) => {
+    e.preventDefault();
+    const tab = el.dataset.tab;
+    switchTab(tab);
+  });
+});
+
+function switchTab(tab) {
+  STATE.currentTab = tab;
+  document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+  document.querySelector(`.nav-links a[data-tab="${tab}"]`)?.classList.add('active');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(`page-${tab}`)?.classList.add('active');
+  if (tab === 'chunks') loadChunks();
+}
+
+// ============================================================
+// Upload
+// ============================================================
+const uploadArea = document.getElementById('uploadArea');
+const fileInput = document.getElementById('fileInput');
+
+uploadArea.addEventListener('click', () => fileInput.click());
+uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+uploadArea.addEventListener('drop', (e) => {
+  e.preventDefault(); uploadArea.classList.remove('dragover');
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length) handleFile(fileInput.files[0]);
+});
+
+async function handleFile(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  STATE.uploadedFile = file;
+
+  const res = await fetch('/api/upload', { method: 'POST', body: formData });
+  if (!res.ok) { alert('Upload failed'); return; }
+  const data = await res.json();
+  STATE.uploadedFilePath = data.filepath;
+  showPreview(data);
+}
+
+function showPreview(data) {
+  document.getElementById('uploadPreview').style.display = 'block';
+  document.getElementById('previewStats').innerHTML = `
+    <div class="stat-box"><div class="value">${data.rows}</div><div class="label">Rows</div></div>
+    <div class="stat-box"><div class="value">${data.columns.length}</div><div class="label">Columns</div></div>
+  `;
+  if (data.preview?.length) {
+    const cols = Object.keys(data.preview[0]);
+    let html = '<table><thead><tr>' + cols.map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>';
+    data.preview.forEach(row => {
+      html += '<tr>' + cols.map(c => `<td>${String(row[c] || '').slice(0, 60)}</td>`).join('') + '</tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('previewTable').innerHTML = html;
+  }
+}
+
+// Ingest button
+document.getElementById('ingestBtn').addEventListener('click', async () => {
+  if (!STATE.uploadedFilePath) { alert('Upload a file first'); return; }
+  const textCols = document.getElementById('textCols').value;
+  const metaCols = document.getElementById('metaCols').value;
+  switchTab('ingest');
+  await startIngestion(STATE.uploadedFilePath, textCols, metaCols);
+});
+
+document.getElementById('quickIngestBtn').addEventListener('click', async () => {
+  switchTab('ingest');
+  await startIngestion('testcase/vwo_test_cases.csv', 'title,steps,expected', 'id,jira_id,priority,module,tags');
+});
+
+// ============================================================
+// Ingest
+// ============================================================
+async function startIngestion(filepath, textCols, metaCols) {
+  // Reset stages
+  document.querySelectorAll('#stageList .stage').forEach(s => {
+    s.className = 'stage pending'; s.querySelector('.status').textContent = s.dataset.stage === 'read' ? '1' : s.dataset.stage === 'build_docs' ? '2' : s.dataset.stage === 'chunk' ? '3' : s.dataset.stage === 'embed' ? '4' : '5';
+  });
+  document.getElementById('ingestResults').style.display = 'none';
+
+  const formData = new FormData();
+  formData.append('filepath', filepath);
+  formData.append('text_cols', textCols);
+  formData.append('meta_cols', metaCols);
+
+  try {
+    const res = await fetch('/api/ingest/file', { method: 'POST', body: formData });
+    if (!res.ok) { alert('Ingestion failed'); return; }
+    const result = await res.json();
+
+    // Mark all stages complete
+    document.querySelectorAll('#stageList .stage').forEach(s => {
+      s.className = 'stage completed';
+      s.querySelector('.status').textContent = '✓';
+    });
+
+    // Show results
+    document.getElementById('ingestResults').style.display = 'block';
+    document.getElementById('ingestStats').innerHTML = `
+      <div class="stat-box"><div class="value">${result.total_chunks}</div><div class="label">Total Chunks</div></div>
+      <div class="stat-box"><div class="value">${result.total_docs}</div><div class="label">Documents</div></div>
+      ${result.chunks ? `
+        <div class="stat-box"><div class="value">${result.chunks.avg_chars || 0}</div><div class="label">Avg Chars/Chunk</div></div>
+        <div class="stat-box"><div class="value">${result.chunks.count || 0}</div><div class="label">Chunks Created</div></div>
+      ` : ''}
+    `;
+
+    // Show sample chunk
+    if (result.chunks?.sample_chunks?.length) {
+      const details = document.getElementById('stageDetails');
+      details.innerHTML = '<h3 style="font-size:13px;margin:8px 0 4px;">Sample Chunks:</h3>' +
+        result.chunks.sample_chunks.slice(0, 3).map((t, i) =>
+          `<div class="chunk-card"><strong>#${i+1}</strong> ${t}...</div>`
+        ).join('');
+    }
+  } catch (e) {
+    alert('Ingestion error: ' + e.message);
+  }
+}
+
+// ============================================================
+// Chunks
+// ============================================================
+async function loadChunks(reset = true) {
+  if (reset) { STATE.chunks = []; STATE.chunkOffset = null; }
+  const search = document.getElementById('chunkSearch').value;
+  const module = document.getElementById('chunkModule').value;
+  const priority = document.getElementById('chunkPriority').value;
+
+  const params = new URLSearchParams({ limit: STATE.chunkLimit });
+  if (STATE.chunkOffset) params.set('offset', STATE.chunkOffset);
+  if (search) params.set('search', search);
+  if (module) params.set('module', module);
+  if (priority) params.set('priority', priority);
+
+  try {
+    const res = await fetch('/api/chunks?' + params.toString());
+    if (!res.ok) return;
+    const data = await res.json();
+    STATE.chunks = reset ? data.points : [...STATE.chunks, ...data.points];
+    STATE.chunkOffset = data.next_offset;
+    document.getElementById('chunkCount').textContent = `${data.total} total`;
+
+    renderChunks();
+  } catch (e) { /* ignore */ }
+}
+
+function renderChunks() {
+  const container = document.getElementById('chunkList');
+  if (!STATE.chunks.length) { container.innerHTML = '<p style="color:var(--text-light);font-size:13px;">No chunks found. Ingest data first.</p>'; return; }
+  container.innerHTML = STATE.chunks.map((c, i) => `
+    <div class="chunk-card">
+      <div class="meta">
+        <span class="badge badge-module">${c.module || 'N/A'}</span>
+        <span class="badge badge-priority">${c.priority || 'N/A'}</span>
+        <span class="badge badge-jira">${c.jira_id || 'N/A'}</span>
+        <span style="font-size:11px;color:var(--text-light);">#${c.id}</span>
+      </div>
+      <strong>${c.title || 'Untitled'}</strong><br>
+      <span style="font-size:12px;color:var(--text-light);">${(c.text || '').slice(0, 300)}${(c.text || '').length > 300 ? '...' : ''}</span>
+    </div>
+  `).join('');
+}
+
+document.getElementById('chunkFilterBtn').addEventListener('click', () => loadChunks(true));
+document.getElementById('chunkLoadMore').addEventListener('click', () => loadChunks(false));
+document.getElementById('chunkSearch').addEventListener('keydown', (e) => { if (e.key === 'Enter') loadChunks(true); });
+
+// ============================================================
+// Chat
+// ============================================================
+const chatInput = document.getElementById('chatInput');
+const chatSend = document.getElementById('chatSend');
+
+chatSend.addEventListener('click', sendMessage);
+chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+function addMessage(role, content) {
+  const div = document.createElement('div');
+  div.className = `msg msg-${role}`;
+  div.innerHTML = content;
+  document.getElementById('chatMessages').appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth' });
+}
+
+function resetPipelineStages() {
+  document.querySelectorAll('#chatStages .stage').forEach(s => {
+    s.className = 'stage pending';
+    const num = s.dataset.stage === 'rewrite' ? '1' : s.dataset.stage === 'embed' ? '2' : s.dataset.stage === 'hybrid_search' ? '3' : s.dataset.stage === 'rerank' ? '4' : '5';
+    s.querySelector('.status').textContent = num;
+  });
+  document.getElementById('pipelineDetails').innerHTML = '';
+}
+
+function setStageActive(stageId) {
+  document.querySelectorAll('#chatStages .stage').forEach(s => {
+    if (s.dataset.stage === stageId) { s.className = 'stage active'; s.querySelector('.status').textContent = '●'; }
+  });
+}
+
+function setStageComplete(stageId) {
+  document.querySelector(`#chatStages .stage[data-stage="${stageId}"]`).className = 'stage completed';
+  document.querySelector(`#chatStages .stage[data-stage="${stageId}"]`).querySelector('.status').textContent = '✓';
+}
+
+async function sendMessage() {
+  const text = chatInput.value.trim();
+  if (!text || STATE.isChatting) return;
+  chatInput.value = '';
+  addMessage('user', text);
+  resetPipelineStages();
+  STATE.isChatting = true;
+  chatSend.disabled = true;
+  chatSend.innerHTML = '<span class="loading-spinner"></span>';
+
+  try {
+    // Simulate pipeline stages
+    setStageActive('rewrite');
+    await sleep(300);
+    setStageComplete('rewrite');
+    setStageActive('embed');
+    await sleep(300);
+    setStageComplete('embed');
+    setStageActive('hybrid_search');
+    await sleep(300);
+    setStageComplete('hybrid_search');
+    setStageActive('rerank');
+    await sleep(200);
+    setStageComplete('rerank');
+    setStageActive('generate');
+
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text }),
+    });
+
+    if (!res.ok) { addMessage('assistant', '❌ Error: ' + res.statusText); return; }
+    const data = await res.json();
+    setStageComplete('generate');
+
+    // Build pipeline details
+    let details = '';
+    if (data.rewrites?.length > 1) {
+      details += '<div style="margin:8px 0;"><strong>Query Rewrites:</strong><br>' +
+        data.rewrites.map(r => `<span class="rewrite-bubble">${r}</span>`).join(' ') + '</div>';
+    }
+    if (data.reranked_results?.length) {
+      details += '<div style="margin:8px 0;"><strong>Top Results (after re-rank):</strong></div>';
+      data.reranked_results.forEach((r, i) => {
+        details += `<div class="chunk-card" style="padding:8px;font-size:12px;">
+          <strong>[Chunk ${i+1}]</strong> ${r.title || 'Untitled'}
+          <span style="color:var(--text-light);"> — ${r.jira_id || ''} — score: ${r.rerank_score || ''}</span>
+        </div>`;
+      });
+    }
+    document.getElementById('pipelineDetails').innerHTML = details;
+
+    // Format answer
+    let answerHtml = data.answer.replace(/\n/g, '<br>');
+    if (data.is_generate) {
+      answerHtml = '<div style="border-left:3px solid var(--accent-green);padding-left:12px;">' + answerHtml + '</div>';
+    }
+    if (data.model) {
+      answerHtml += `<br><span style="font-size:11px;color:var(--text-light);">Model: ${data.model}</span>`;
+    }
+    addMessage('assistant', answerHtml);
+  } catch (e) {
+    addMessage('assistant', '❌ Error: ' + e.message);
+  } finally {
+    STATE.isChatting = false;
+    chatSend.disabled = false;
+    chatSend.textContent = 'Send';
+  }
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Load module filter options
+async function loadModuleOptions() {
+  try {
+    const res = await fetch('/api/chunks?limit=1');
+    const data = await res.json();
+    // We'll fetch modules separately if needed
+  } catch(e) {}
+}
+loadModuleOptions();
+
+</script>
+</body>
+</html>
