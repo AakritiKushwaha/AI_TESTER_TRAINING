@@ -1,0 +1,18 @@
+wmic output:
+ExecutablePath  
+
+                
+
+
+
+
+stderr:
+
+
+C:\Users\Admin\chroma_data exists=False
+
+C:\Users\Admin\AppData\Local\chroma_data exists=False
+
+C:\Python314\chroma_data exists=False
+
+done

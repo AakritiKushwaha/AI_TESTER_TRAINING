@@ -1,19 +1,10 @@
-import collections
-import collections.abc
 import json
 import os
 import re
 import shutil
-import sys
 import urllib.request
 from pathlib import Path
 from typing import List
-
-for name in ('Mapping', 'MutableMapping', 'Sequence', 'MutableSequence', 'Set', 'MutableSet', 'Callable'):
-    if not hasattr(collections, name):
-        setattr(collections, name, getattr(collections.abc, name))
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -229,7 +220,7 @@ def query_pdf(payload: QueryRequest):
 
     context_parts = []
     for i, doc in enumerate(documents):
-        context_parts.append(f'【Chunk {i+1}】 {doc}')
+        context_parts.append(f'\u300cChunk {i+1}\u300d {doc}')
     context = '\n\n'.join(context_parts)
 
     try:
@@ -244,7 +235,7 @@ def query_pdf(payload: QueryRequest):
                     'content': (
                         'You answer using only the provided context. '
                         'Cite the chunk each piece of information comes from '
-                        'by placing the chunk marker inline, e.g. 【Chunk 3】. '
+                        'by placing the chunk marker inline, e.g. \u300cChunk 3\u300d. '
                         'If the answer is not in the context, say so clearly.'
                     )
                 },
