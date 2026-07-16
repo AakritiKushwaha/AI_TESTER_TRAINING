@@ -189,13 +189,12 @@ async def test_connection():
             status_code=500, detail="Langflow is not configured in .env"
         )
 
-    url = f"{LANGFLOW_URL}/api/v1/run/{LANGFLOW_FLOW_ID}"
-    payload = _build_langflow_payload("ping")
+    url = f"{LANGFLOW_URL}/api/v1/flows/{LANGFLOW_FLOW_ID}"
     headers = _build_langflow_headers()
 
     try:
-        async with httpx.AsyncClient(timeout=45.0) as client:
-            resp = await client.post(url, json=payload, headers=headers)
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(url, headers=headers)
             resp.raise_for_status()
             return {"status": "ok", "flow_id": LANGFLOW_FLOW_ID}
     except Exception as e:
@@ -330,27 +329,29 @@ def _fetch_flow_config() -> tuple[dict | None, str | None]:
 @app.get("/api/pipeline-status")
 async def pipeline_status():
     """
-    Return live Langflow & Chroma DB pipeline metadata.
+    Return Langflow & Chroma DB pipeline metadata.
 
-    - ``connected`` reflects whether the Langflow API is reachable and the
-      flow executed successfully.
-    - Chroma collection details are obtained by *running* the Langflow
-      flow with a lightweight trigger — no local disk access required.
+    - ``connected`` reflects whether the Langflow API is reachable.
     - Static config (collection_name, embedding_model) comes from the flow
-      definition as a fallback.
+      definition — no heavyweight flow execution required.
     """
-    # Step 1: Verify the pipeline can actually run (lightweight call)
-    run_result = _run_lightweight_check()
-
-    if not run_result.get("connected"):
+    # Step 1: Quick connectivity check
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(
+                f"{LANGFLOW_URL}/api/v1/flows/{LANGFLOW_FLOW_ID}",
+                headers=_build_langflow_headers(),
+            )
+            resp.raise_for_status()
+    except Exception as exc:
         return {
             "connected": False,
-            "error": run_result.get("error", "Pipeline check failed"),
+            "error": f"Cannot reach Langflow at {LANGFLOW_URL}: {exc}",
             "last_checked": datetime.now(timezone.utc).isoformat(),
         }
 
     # Step 2: Get static config from the flow definition
-    flow_config, config_err = _fetch_flow_config()
+    flow_config, _ = _fetch_flow_config()
     collection_name = (
         flow_config.get("collection_name", "ecom_test_cases")
         if flow_config
@@ -358,14 +359,11 @@ async def pipeline_status():
     )
     embedding_model = (flow_config or {}).get("embedding_model")
 
-    # Step 3: Merge runtime data from the lightweight run with config
     return {
         "connected": True,
         "collection_name": collection_name,
-        "total_vectors_stored": run_result.get("total_vectors_stored"),
-        "embedding_dims": run_result.get("embedding_dims") or (
-            flow_config.get("embedding_dimensions") if flow_config else None
-        ),
+        "total_vectors_stored": None,
+        "embedding_dims": flow_config.get("embedding_dimensions") if flow_config else None,
         "embedding_model": embedding_model,
         "last_checked": datetime.now(timezone.utc).isoformat(),
     }
