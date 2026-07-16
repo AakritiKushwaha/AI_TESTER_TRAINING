@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import APIRouter, FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
@@ -22,7 +22,8 @@ LANGFLOW_HEADERS = {
     "ngrok-skip-browser-warning": "true",
 } if LANGFLOW_API_KEY else {}
 
-app = FastAPI(title="RAG Explorer API")
+ROOT_PATH = os.getenv("LANGFLOW_ROOT_PATH", "")
+app = FastAPI(title="RAG Explorer API", root_path=ROOT_PATH)
 
 app.add_middleware(
     CORSMiddleware,
@@ -150,11 +151,7 @@ def _extract_metadata(flat_outputs: list[dict]) -> tuple[str | None, int | None]
     return model, tokens
 
 
-router = APIRouter()
-app.include_router(router)
-
-
-@router.post("/api/ask", response_model=AskResponse)
+@app.post("/api/ask", response_model=AskResponse)
 async def ask(req: AskRequest):
     if not LANGFLOW_URL or not LANGFLOW_FLOW_ID:
         raise HTTPException(
@@ -185,7 +182,7 @@ async def ask(req: AskRequest):
     return AskResponse(answer=answer, chunks=chunks, model=model, tokens=tokens)
 
 
-@router.get("/api/test-connection")
+@app.get("/api/test-connection")
 async def test_connection():
     if not LANGFLOW_URL or not LANGFLOW_FLOW_ID:
         raise HTTPException(
@@ -330,7 +327,7 @@ def _fetch_flow_config() -> tuple[dict | None, str | None]:
     return info if info else None, None
 
 
-@router.get("/api/pipeline-status")
+@app.get("/api/pipeline-status")
 async def pipeline_status():
     """
     Return live Langflow & Chroma DB pipeline metadata.
@@ -371,4 +368,6 @@ async def pipeline_status():
         ),
         "embedding_model": embedding_model,
         "last_checked": datetime.now(timezone.utc).isoformat(),
+    }
+
     }
