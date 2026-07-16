@@ -19,6 +19,7 @@ LANGFLOW_API_KEY = os.getenv("LANGFLOW_API_KEY", "").strip()
 LANGFLOW_HEADERS = {
     "Content-Type": "application/json",
     "x-api-key": LANGFLOW_API_KEY,
+    "ngrok-skip-browser-warning": "true",
 } if LANGFLOW_API_KEY else {}
 
 app = FastAPI(title="RAG Explorer API")
@@ -54,6 +55,7 @@ def _build_langflow_headers() -> dict:
     return {
         "Content-Type": "application/json",
         "x-api-key": LANGFLOW_API_KEY,
+        "ngrok-skip-browser-warning": "true",
     }
 
 
@@ -148,11 +150,11 @@ def _extract_metadata(flat_outputs: list[dict]) -> tuple[str | None, int | None]
     return model, tokens
 
 
-router = APIRouter(prefix="/api")
+router = APIRouter()
 app.include_router(router)
 
 
-@router.post("/ask", response_model=AskResponse)
+@router.post("/api/ask", response_model=AskResponse)
 async def ask(req: AskRequest):
     if not LANGFLOW_URL or not LANGFLOW_FLOW_ID:
         raise HTTPException(
@@ -183,7 +185,7 @@ async def ask(req: AskRequest):
     return AskResponse(answer=answer, chunks=chunks, model=model, tokens=tokens)
 
 
-@router.get("/test-connection")
+@router.get("/api/test-connection")
 async def test_connection():
     if not LANGFLOW_URL or not LANGFLOW_FLOW_ID:
         raise HTTPException(
@@ -328,7 +330,7 @@ def _fetch_flow_config() -> tuple[dict | None, str | None]:
     return info if info else None, None
 
 
-@router.get("/pipeline-status")
+@router.get("/api/pipeline-status")
 async def pipeline_status():
     """
     Return live Langflow & Chroma DB pipeline metadata.
