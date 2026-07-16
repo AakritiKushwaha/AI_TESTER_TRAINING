@@ -134,3 +134,7 @@ Create a `.env` file in the project root:
 ```
 GROQ_API_KEY=your_groq_api_key
 ```
+
+## Related Projects
+
+- **Langflow Naive RAG with RAG Explorer UI** (`../LANGFLOW_NAIVE_RAG_WITH_RAG_EXPLORER_UI/`) — Same RAG Explorer interface but with a Langflow-based backend (ChromaDB + Mistral Embeddings + Groq LLM). Deployable to Vercel with an ngrok-exposed Langflow instance.
