@@ -31,9 +31,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(router)
-
-
 class AskRequest(BaseModel):
     question: str
 
@@ -152,6 +149,7 @@ def _extract_metadata(flat_outputs: list[dict]) -> tuple[str | None, int | None]
 
 
 router = APIRouter(prefix="/api")
+app.include_router(router)
 
 
 @router.post("/ask", response_model=AskResponse)
