@@ -369,5 +369,3 @@ async def pipeline_status():
         "embedding_model": embedding_model,
         "last_checked": datetime.now(timezone.utc).isoformat(),
     }
-
-    }
